@@ -1,0 +1,34 @@
+name: Parse discussion issue from RFCs
+on: [push, pull_request]
+jobs:
+  changedfiles:
+    runs-on: ubuntu-18.04
+    # Map a step output to a job output
+    outputs:
+      all: ${{ steps.changes.outputs.all}}
+      md: ${{ steps.changes.outputs.md }}
+    steps:
+    # Make sure we have some code to diff.
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Get changed files
+      id: changes
+      # Set outputs using the command.
+      run: |
+        echo "::set-output name=all::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | xargs)"
+        echo "::set-output name=md::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep .md$ | xargs)"
+  parse:
+    runs-on: ubuntu-18.04
+    # require the first job to have ran
+    needs: changedfiles
+    # only run there are changed files
+    if: ${{needs.changedfiles.outputs.md}}
+    steps:
+    - name: echo changed files
+      run: echo ${{needs.changedfiles.outputs.md}}
+    - name: parse discussion issue
+      run: |
+          for f in ${{needs.changedfiles.outputs.md}}; do
+            cat $f | grep discussion | awk -F" " '{print $2}'
+          done
+
