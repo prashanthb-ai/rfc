@@ -1,0 +1,35 @@
+name: Parse discussion issue from RFCs
+# pull_request runs for PR open, re-opened or sync (commits pushed).
+on: [pull_request]
+jobs:
+  changedfiles:
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Checkout repository
+      with:
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        fetch-depth: 0
+      uses: actions/checkout@v2
+    - name: Get changed files
+      id: changes
+      # Consider using something from the GH marketplace to achieve this.
+      # head.sha is the sha of the latest commit.
+      # base.sha is the existing repo's top commit.
+      run: |
+        echo "::set-output name=all::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | xargs)"
+        echo "::set-output name=md::$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep rfc/.*md$ | xargs)"
+    - name: Comment with discussion issue
+      if: ${{ steps.changes.outputs.md }}
+      env:
+        URL: ${{ github.event.pull_request.comments_url }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # TODO: Either cleanup this bash or write it in python.
+      run: |
+          links=()
+          for f in ${{ steps.changes.outputs.md }}; do
+            links+=($(cat $f | grep discussion | awk -F" " '{print $2}'))
+          done
+          curl -X POST $URL \
+            -H "Content-Type: application/json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            --data "{\"body\": \"Discussion issue links: ${links[@]}\"}"
