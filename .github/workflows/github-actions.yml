@@ -30,6 +30,7 @@ jobs:
             echo "Checking file: ${f}"
             links+=($(cat $f | grep "discussion: https://github.com/.*/[0-9+]" | awk -F" " '{print $2}'))
           done
+          echo "Discussion issue links ${links[@]}"
           curl -X POST $URL \
             -H "Content-Type: application/json" \
             -H "Authorization: token $GITHUB_TOKEN" \
