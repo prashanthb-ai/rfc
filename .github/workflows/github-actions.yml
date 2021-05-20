@@ -27,7 +27,8 @@ jobs:
       run: |
           links=()
           for f in ${{ steps.changes.outputs.md }}; do
-            links+=($(cat $f | grep discussion | awk -F" " '{print $2}'))
+            echo "Checking file: ${f}"
+            links+=($(cat $f | grep "discussion: https://github.com/.*/[0-9+]" | awk -F" " '{print $2}'))
           done
           curl -X POST $URL \
             -H "Content-Type: application/json" \
